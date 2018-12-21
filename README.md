@@ -1,5 +1,10 @@
-[comment]: # (//github.com/babinets/LazyLoad)
 # *LazyLoad*
+
+## Deprecated!
+Use [JavaScript](//github.com/sabroan/lazyload.script) / [CSS](//github.com/sabroan/lazyload.link) instead.
+
+---
+
 Fast and tiny no-dependency javaScript utility that makes it easy to load assets.
 Global object `LazyLoad` will be created, which contain next methods:
 ### LazyLoad.script

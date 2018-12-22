@@ -4,8 +4,8 @@ Global object `LazyLoad` will be created, which contain next methods:
 ## LazyLoad.script
 This method requires an object as argument and represent queue, which should be loaded or executed.
 Passed object should contain *object's* with propertys which represent script tag attributes.
-If **`async`** attribute is not set, the following script will be executed, only when current is completely ready.
-Support inline events.
+If **`async`** attribute is not set, the following script will be executed, only when current is completely ready.  
+Support inline events.  
 *Note:* **`src`** attribute is **required!**
 ### Example
 ```javascript

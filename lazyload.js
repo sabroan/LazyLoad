@@ -1,98 +1,184 @@
 /*jslint browser: true*/
 /*jshint esversion: 6 */
-/*global window, document */
-;(function () {
-    'use scrict';
-    const Public = function () {};
-    const Fn = {
-        forEach: function (array, callback) {
-            Array.prototype.forEach.call(array, callback);
-        },
-        hasProperty: function (object, property) {
-            return Object.prototype.hasOwnProperty.call(object, property);
-        }
+/* global window, document */
+var LazyLoad = (function () {
+    "use strict";
+    const ARRAY = Array;
+    const OBJECT = Object;
+    const WINDOW = window;
+    const DOCUMENT = document;
+    const listen = "addEventListener";
+    const unlisten = "removeEventListener";
+    const setTimeout = WINDOW.setTimeout;
+    const forEach = function (array, callback) {
+        return ARRAY.prototype.forEach.call(array, callback);
     };
-    Public.prototype.script = function (queue) {
+    const hasProperty = function (object, property) {
+        return OBJECT.prototype.hasOwnProperty.call(object, property);
+    };
+    const isInArray = function (array, value) {
+        return (array.indexOf(value) >= 0);
+    };
+    const getLoadedNodes = function (tag, attribute) {
+        const nodes = DOCUMENT.getElementsByTagName(tag);
         const loaded = [];
-        const indexes = Object.keys(queue);
-        const scripts = document.getElementsByTagName('script');
-        Fn.forEach(scripts, function (script) {
-            const source = script.getAttribute('src');
-            if (source) {
-                loaded.push(source);
+        forEach(nodes, function (node) {
+            const property = node.getAttribute(attribute);
+            if (property) {
+                loaded.push(property);
             }
         });
-        let Load;
-        Load = function () {
-            if (0 >= indexes.length) {
+        return loaded;
+    };
+    const Public = function () {
+        return;
+    };
+    Public.prototype.script = function (queue) {
+        const loaded = getLoadedNodes("script", "src");
+        const indexes = OBJECT.keys(queue);
+        function Load() {
+            if (indexes.length === 0) {
                 return;
             }
             const index = indexes.shift();
             const script = queue[index];
-            const has_src = Fn.hasProperty(script, 'src');
-            const is_loaded = (loaded.indexOf(script.src) >= 0);
-            if (has_src && !is_loaded) {
+            if (hasProperty(script, "src") && !isInArray(loaded, script.src)) {
                 loaded.push(script.src);
-                const node = document.createElement('script');
-                const attributes = Object.keys(script);
-                Fn.forEach(attributes, function (attribute) {
+                const node = DOCUMENT.createElement("script");
+                const attributes = OBJECT.keys(script);
+                forEach(attributes, function (attribute) {
                     node[attribute] = script[attribute];
                 });
-                if (node.hasAttribute('async')) {
-                    window.setTimeout(Load);
-                } else {
-                    node.addEventListener('load', Load, false);
-                }
-                return document.body.appendChild(node);
+                DOCUMENT.body.appendChild(node);
             }
-            return window.setTimeout(Load);
-        };
-        return window.setTimeout(Load);
+            setTimeout(Load);
+        }
+        setTimeout(Load);
     };
     Public.prototype.link = function (queue) {
-        const loaded = [];
-        const links = document.getElementsByTagName('link');
-        Fn.forEach(links, function (link) {
-            const href = link.getAttribute('href');
-            if (href) {
-                loaded.push(href);
-            }
-        });
+        const loaded = getLoadedNodes("link", "href");
         const Load = function () {
-            const fragment = document.createDocumentFragment();
-            Fn.forEach(Object.keys(queue), function (index) {
+            const fragment = DOCUMENT.createDocumentFragment();
+            forEach(OBJECT.keys(queue), function (index) {
                 const link = queue[index];
-                const has_href = Fn.hasProperty(link, 'href');
-                const is_loaded = (loaded.indexOf(link.href) >= 0);
-                if (has_href && !is_loaded) {
+                const hasHref = hasProperty(link, "href");
+                const isLoaded = isInArray(loaded, link.href);
+                if (hasHref && !isLoaded) {
                     loaded.push(link.href);
-                    const node = document.createElement('link');
-                    const defaults = {
-                        rel: 'stylesheet',
-                        type: 'text/css'
+                    const node = DOCUMENT.createElement("link");
+                    const attributes = {
+                        rel: "stylesheet",
+                        type: "text/css"
                     };
-                    Fn.forEach(Object.keys(defaults), function (attribute) {
-                        const is_set = Fn.hasProperty(link, attribute);
-                        if (!is_set) {
-                            link[attribute] = defaults[attribute];
+                    forEach(OBJECT.keys(attributes), function (attribute) {
+                        const isSet = hasProperty(link, attribute);
+                        if (!isSet) {
+                            link[attribute] = attributes[attribute];
                         }
                     });
-                    Fn.forEach(Object.keys(link), function (attribute) {
+                    forEach(OBJECT.keys(link), function (attribute) {
                         node[attribute] = link[attribute];
                     });
                     fragment.appendChild(node);
                 }
             });
-            return document.head.appendChild(fragment);
+            DOCUMENT.head.appendChild(fragment);
         };
-        const AnimationFrame = window.requestAnimationFrame;
+        const AnimationFrame = WINDOW.requestAnimationFrame;
         if (AnimationFrame) {
-            AnimationFrame.call(window, function () {
-                window.setTimeout(Load);
+            AnimationFrame.call(WINDOW, function () {
+                setTimeout(Load);
             });
+        } else if (DOCUMENT.readyState === "loading") {
+            DOCUMENT[listen]("DOMContentLoaded", Load, true);
         } else {
-            window.addEventListener('DOMContentLoaded', Load, false);
+            setTimeout(Load);
         }
     };
-    window.LazyLoad = new Public ();
-})();
+    Public.prototype.onSight = function (selector) {
+        if (!selector) {
+            return;
+        }
+        const Observ = function() {
+            const nodeList = DOCUMENT.querySelectorAll(selector);
+            const isObserver = hasProperty(WINDOW, "IntersectionObserver");
+            const setNodeSource = function (node) {
+                const applyDataset = function (element) {
+                    forEach(["srcset", "src", "data"], function (property) {
+                        if (hasProperty(element.dataset, property)) {
+                            element[property] = element.dataset[property];
+                        }
+                    });
+                };
+                if (node.children.length) {
+                    forEach(OBJECT.keys(node.children), function (index) {
+                        applyDataset(node.children[index]);
+                    });
+                    if (isInArray(["VIDEO", "AUDIO"], node.tagName)) {
+                        node.load();
+                    }
+                } else {
+                    applyDataset(node);
+                }
+            };
+            if (isObserver) {
+                const ObserverConstructor = WINDOW.IntersectionObserver;
+                const Observer = new ObserverConstructor(function(list) {
+                    forEach(list, function(entry) {
+                        if (entry.isIntersecting) {
+                            setNodeSource(entry.target);
+                            Observer.unobserve(entry.target);
+                        }
+                    });
+                });
+                forEach(nodeList, function(node) {
+                    Observer.observe(node);
+                });
+            } else {
+                let running = false;
+                const nodeArray = ARRAY.prototype.slice.call(nodeList);
+                const isVisible = function (element) {
+                    const clientRect = element.getBoundingClientRect();
+                    const style = WINDOW.getComputedStyle(element);
+                    const inViewport = (
+                        (clientRect.top <= WINDOW.innerHeight) &&
+                        clientRect.bottom >= 0
+                    );
+                    return (inViewport && style.display !== "none");
+                };
+                const onSight = function() {
+                    if (running) {
+                        return;
+                    }
+                    running = true;
+                    setTimeout(function () {
+                        forEach(nodeArray, function(element, index) {
+                            if (!isVisible(element)) {
+                                return;
+                            }
+                            setNodeSource(element);
+                            nodeArray.splice(index, 1);
+                            if (nodeArray.length === 0) {
+                                WINDOW[unlisten]("load", onSight, true);
+                                WINDOW[unlisten]("resize", onSight);
+                                WINDOW[unlisten]("orientationchange", onSight);
+                                DOCUMENT[unlisten]("scroll", onSight, true);
+                            }
+                        });
+                        running = false;
+                    }, 200);
+                };
+                WINDOW[listen]("load", onSight, true);
+                WINDOW[listen]("resize", onSight);
+                WINDOW[listen]("orientationchange", onSight);
+                DOCUMENT[listen]("scroll", onSight, true);
+            }
+        };
+        if (DOCUMENT.readyState === "loading") {
+            DOCUMENT[listen]("DOMContentLoaded", Observ, true);
+        } else {
+            setTimeout(Observ);
+        }
+    };
+    return new Public();
+}());
